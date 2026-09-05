@@ -1,0 +1,124 @@
+{
+  "entities": {
+    "groups": {
+      "title": "Group",
+      "description": "Shared gift group decision engine",
+      "type": "object",
+      "properties": {
+        "coupleName": { "type": "string" },
+        "occasion": { "type": "string" },
+        "weddingDate": { "type": "string" },
+        "deadlineDate": { "type": "string" },
+        "contributionMode": { "type": "string" },
+        "giftDescription": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "creatorName": { "type": "string" },
+        "status": { "type": "string" },
+        "phase": { "type": "number" },
+        "participantCount": { "type": "number" },
+        "responseCount": { "type": "number" },
+        "recommendedAmount": { "type": "number" },
+        "agreedAmount": { "type": "number" },
+        "proposedAmount": { "type": "number" },
+        "isBudgetLocked": { "type": "boolean" },
+        "createdShareCode": { "type": "string" },
+        "upiId": { "type": "string" },
+        "paymentNotes": { "type": "string" }
+      },
+      "required": ["coupleName", "createdAt", "createdBy", "status"]
+    },
+    "shareCodes": {
+      "title": "ShareCode",
+      "description": "6-character short code mapping to groupId",
+      "type": "object",
+      "properties": {
+        "groupId": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["groupId", "createdAt"]
+    }
+  },
+  "subcollections": {
+    "groups": {
+      "participants": {
+        "title": "Participant",
+        "description": "Public-safe participant identity",
+        "type": "object",
+        "properties": {
+          "displayName": { "type": "string" },
+          "joinedAt": { "type": "string" },
+          "hasSubmitted": { "type": "boolean" },
+          "isCreator": { "type": "boolean" },
+          "role": { "type": "string" }
+        },
+        "required": ["displayName", "joinedAt"]
+      },
+      "budgets": {
+        "title": "Budget",
+        "description": "Private participant budget document",
+        "type": "object",
+        "properties": {
+          "couldDo": { "type": "number" },
+          "feelsRight": { "type": "number" },
+          "wouldStretchTo": { "type": "number" },
+          "priorityPreference": { "type": "string" },
+          "submittedAt": { "type": "string" },
+          "updatedAt": { "type": "string" }
+        },
+        "required": ["feelsRight", "submittedAt"]
+      },
+      "payments": {
+        "title": "Payment",
+        "description": "Creator-verified payment record",
+        "type": "object",
+        "properties": {
+          "isVerified": { "type": "boolean" },
+          "amount": { "type": "number" },
+          "verifiedAt": { "type": "string" }
+        }
+      },
+      "paymentClaims": {
+        "title": "PaymentClaim",
+        "description": "Participant self-reported payment confirmation",
+        "type": "object",
+        "properties": {
+          "claimed": { "type": "boolean" },
+          "claimedAt": { "type": "string" },
+          "upiRef": { "type": "string" },
+          "note": { "type": "string" }
+        }
+      },
+      "giftOptions": {
+        "title": "GiftOption",
+        "description": "Gift ideas for group voting",
+        "type": "object",
+        "properties": {
+          "title": { "type": "string" },
+          "category": { "type": "string" },
+          "estimatedPrice": { "type": "number" },
+          "description": { "type": "string" }
+        }
+      },
+      "votes": {
+        "title": "Vote",
+        "description": "Group votes on gifts or contribution tiers",
+        "type": "object",
+        "properties": {
+          "giftOptionId": { "type": "string" },
+          "votedAt": { "type": "string" }
+        }
+      },
+      "recoveryTokens": {
+        "title": "RecoveryToken",
+        "description": "Allows cross-device participant session recovery",
+        "type": "object",
+        "properties": {
+          "participantId": { "type": "string" },
+          "createdAt": { "type": "string" }
+        },
+        "required": ["participantId", "createdAt"]
+      }
+    }
+  }
+}

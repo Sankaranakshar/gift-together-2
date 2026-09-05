@@ -1,0 +1,6 @@
+{
+  "name": "GiftTogether",
+  "description": "Find the wedding gift budget everyone feels good about. Private individual budgets, fair group recommendations, zero awkwardness.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
