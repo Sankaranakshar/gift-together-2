@@ -27,3 +27,21 @@ export function generateRandomGroupId(length = 9): string {
 export function generateRecoveryToken(): string {
   return 'gt_rec_' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
+
+export async function hashRecoveryToken(token: string): Promise<string> {
+  const clean = token.trim();
+  if (typeof crypto !== 'undefined' && crypto.subtle) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(clean);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+  // Fallback for environments without crypto.subtle
+  let hash = 0;
+  for (let i = 0; i < clean.length; i++) {
+    hash = ((hash << 5) - hash) + clean.charCodeAt(i);
+    hash |= 0;
+  }
+  return 'h_' + Math.abs(hash).toString(16);
+}

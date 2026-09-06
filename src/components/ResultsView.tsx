@@ -16,9 +16,10 @@ import {
   ArrowLeft,
   Check
 } from 'lucide-react';
-import { GiftGroup, AlgorithmResult, GroupFitEvaluation } from '../types';
+import { GiftGroup, AlgorithmResult, GroupFitEvaluation, Participant } from '../types';
 import { formatINR } from '../utils/format';
 import { evaluateCustomAmount } from '../utils/algorithm';
+import { ProposalVoteCard } from './ProposalVoteCard';
 
 interface ResultsViewProps {
   group: GiftGroup;
@@ -31,6 +32,7 @@ interface ResultsViewProps {
   onEditMyBudget: () => void;
   onLockAmount?: (amount: number) => void;
   isCreator: boolean;
+  currentParticipant?: Participant | null;
 }
 
 export const ResultsView: React.FC<ResultsViewProps> = ({
@@ -44,6 +46,7 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
   onEditMyBudget,
   onLockAmount,
   isCreator,
+  currentParticipant,
 }) => {
   const [showExplanation, setShowExplanation] = useState(false);
   const [simAmount, setSimAmount] = useState<number>(result.recommended.amount || 2000);
@@ -246,6 +249,16 @@ export const ResultsView: React.FC<ResultsViewProps> = ({
           )}
         </div>
       </div>
+
+      {/* Private Group Proposal Voting Card */}
+      <ProposalVoteCard
+        groupId={group.id}
+        proposedAmount={activeOpt.amount}
+        totalParticipants={total}
+        isCreator={isCreator}
+        onProceedToGifts={onGoToChooseGift}
+        currentParticipantName={currentParticipant?.displayName || currentParticipant?.name}
+      />
 
       {/* "What If?" Simulation Tool for Organizer */}
       <div 

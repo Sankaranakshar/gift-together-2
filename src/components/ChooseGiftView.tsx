@@ -93,10 +93,11 @@ export const ChooseGiftView: React.FC<ChooseGiftViewProps> = ({
         targetBudget,
         style: 'Thoughtful & High Utility',
         notes: group.giftDescription,
+        giftAmbition: group.giftAmbition,
       });
 
-      // Add generated ideas to the group
-      for (const idea of result.ideas) {
+      // Add generated curated ideas to the group (3-5 options max)
+      for (const idea of result.ideas.slice(0, 4)) {
         await createGiftOption(group.id, {
           title: idea.title,
           category: idea.category,

@@ -24,7 +24,10 @@
         "isBudgetLocked": { "type": "boolean" },
         "createdShareCode": { "type": "string" },
         "upiId": { "type": "string" },
-        "paymentNotes": { "type": "string" }
+        "paymentNotes": { "type": "string" },
+        "giftAmbition": { "type": "string" },
+        "proposalVoteCount": { "type": "number" },
+        "proposalAgreedCount": { "type": "number" }
       },
       "required": ["coupleName", "createdAt", "createdBy", "status"]
     },
@@ -108,6 +111,17 @@
           "giftOptionId": { "type": "string" },
           "votedAt": { "type": "string" }
         }
+      },
+      "proposalVotes": {
+        "title": "ProposalVote",
+        "description": "Group consensus vote on the recommended or proposed contribution amount",
+        "type": "object",
+        "properties": {
+          "vote": { "type": "string" },
+          "votedAt": { "type": "string" },
+          "participantName": { "type": "string" }
+        },
+        "required": ["vote", "votedAt"]
       },
       "recoveryTokens": {
         "title": "RecoveryToken",

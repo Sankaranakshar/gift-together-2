@@ -9,9 +9,9 @@ import {
   runTransaction,
   Unsubscribe,
 } from 'firebase/firestore';
-import { db, auth, ensureAnonymousAuth, signInWithGoogle } from './firebase';
+import { db, auth, getCurrentUserId } from './firebase';
 import { Participant } from '../types/participant';
-import { generateRecoveryToken } from '../utils/ids';
+import { generateRecoveryToken, hashRecoveryToken } from '../utils/ids';
 import { verifyParticipantPayment } from './paymentClaimService';
 
 export interface ParticipantSession {
@@ -54,20 +54,11 @@ export async function joinGroup(groupId: string, displayName: string): Promise<P
     throw new Error('Database is not available.');
   }
 
-  let user = auth?.currentUser || (await ensureAnonymousAuth());
-  if (!user) {
-    try {
-      user = await signInWithGoogle();
-    } catch {
-      // user closed popup
-    }
-  }
-  if (!user) {
-    throw new Error('Please sign in with Google to join this group.');
-  }
+  const existingSession = getParticipantSession(groupId);
+  const userId = auth?.currentUser?.uid || existingSession?.participantId || getCurrentUserId();
 
   const cleanName = displayName.trim();
-  const participantRef = doc(db, 'groups', groupId, 'participants', user.uid);
+  const participantRef = doc(db, 'groups', groupId, 'participants', userId);
   const groupRef = doc(db, 'groups', groupId);
 
   // Check if participant already exists for this user
@@ -76,12 +67,12 @@ export async function joinGroup(groupId: string, displayName: string): Promise<P
     const existing = existingSnap.data() as Participant;
     const session = getParticipantSession(groupId);
     saveParticipantSession(groupId, {
-      participantId: user.uid,
+      participantId: userId,
       displayName: existing.displayName || existing.name || cleanName,
       recoveryToken: session?.recoveryToken || generateRecoveryToken(),
       isCreator: Boolean(existing.isCreator),
     });
-    return { ...existing, id: user.uid };
+    return { ...existing, id: userId };
   }
 
   const recoveryToken = generateRecoveryToken();
@@ -101,7 +92,7 @@ export async function joinGroup(groupId: string, displayName: string): Promise<P
     });
 
     const newParticipant: Participant = {
-      id: user.uid,
+      id: userId,
       displayName: cleanName,
       name: cleanName,
       joinedAt: now,
@@ -112,12 +103,15 @@ export async function joinGroup(groupId: string, displayName: string): Promise<P
     transaction.set(participantRef, newParticipant);
   });
 
-  // Save recovery token
+  // Save hashed recovery token (non-enumerable, secure)
   try {
-    const recoveryRef = doc(db, 'groups', groupId, 'recoveryTokens', recoveryToken);
+    const hashedToken = await hashRecoveryToken(recoveryToken);
+    const recoveryRef = doc(db, 'groups', groupId, 'recoveryTokens', hashedToken);
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
     await setDoc(recoveryRef, {
-      participantId: user.uid,
+      participantId: userId,
       createdAt: now,
+      expiresAt,
     });
   } catch (err) {
     console.warn('Could not store recovery token:', err);
@@ -125,14 +119,14 @@ export async function joinGroup(groupId: string, displayName: string): Promise<P
 
   // Save session in local storage
   saveParticipantSession(groupId, {
-    participantId: user.uid,
+    participantId: userId,
     displayName: cleanName,
     recoveryToken,
     isCreator: false,
   });
 
   return {
-    id: user.uid,
+    id: userId,
     displayName: cleanName,
     name: cleanName,
     joinedAt: now,
@@ -212,15 +206,49 @@ export async function recoverParticipantByToken(
   groupId: string,
   token: string
 ): Promise<Participant | null> {
+  const cleanToken = token.trim();
+  if (!cleanToken) return null;
+
+  // 1. Try server-side recovery endpoint first
+  try {
+    const res = await fetch(`/api/groups/${encodeURIComponent(groupId)}/recover-participant`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: cleanToken }),
+    });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.success && data.participant) {
+        saveParticipantSession(groupId, {
+          participantId: data.participant.id,
+          displayName: data.participant.displayName || data.participant.name || 'Friend',
+          recoveryToken: cleanToken,
+          isCreator: Boolean(data.participant.isCreator),
+        });
+        return data.participant;
+      }
+    }
+  } catch {
+    // Fall back to Firestore direct hashed lookup
+  }
+
   if (!db) return null;
   try {
-    const recoveryRef = doc(db, 'groups', groupId, 'recoveryTokens', token.trim());
+    const hashedToken = await hashRecoveryToken(cleanToken);
+    const recoveryRef = doc(db, 'groups', groupId, 'recoveryTokens', hashedToken);
     const tokenSnap = await getDoc(recoveryRef);
     if (!tokenSnap.exists()) {
       return null;
     }
 
-    const { participantId } = tokenSnap.data();
+    const tokenData = tokenSnap.data();
+    // Verify expiration if present
+    if (tokenData.expiresAt && new Date(tokenData.expiresAt).getTime() < Date.now()) {
+      console.warn('Recovery token has expired');
+      return null;
+    }
+
+    const { participantId } = tokenData;
     const partRef = doc(db, 'groups', groupId, 'participants', participantId);
     const partSnap = await getDoc(partRef);
     if (!partSnap.exists()) return null;
@@ -229,7 +257,7 @@ export async function recoverParticipantByToken(
     saveParticipantSession(groupId, {
       participantId,
       displayName: participant.displayName || participant.name || 'Friend',
-      recoveryToken: token.trim(),
+      recoveryToken: cleanToken,
       isCreator: Boolean(participant.isCreator),
     });
 
@@ -238,4 +266,27 @@ export async function recoverParticipantByToken(
     console.error('Failed to recover participant by token:', err);
     return null;
   }
+}
+
+/**
+ * P0 Security: Participants can ONLY update displayName and lastActiveAt.
+ * System fields like role, isCreator, joinedAt cannot be modified.
+ */
+export async function updateParticipantDisplayName(
+  groupId: string,
+  displayName: string
+): Promise<void> {
+  if (!db) return;
+  const user = auth?.currentUser;
+  if (!user) return;
+
+  const clean = displayName.trim().slice(0, 60);
+  if (!clean) return;
+
+  const partRef = doc(db, 'groups', groupId, 'participants', user.uid);
+  await updateDoc(partRef, {
+    displayName: clean,
+    name: clean,
+    lastActiveAt: new Date().toISOString(),
+  });
 }

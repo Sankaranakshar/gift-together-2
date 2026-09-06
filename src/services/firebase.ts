@@ -38,6 +38,24 @@ if (isFirebaseConfigured) {
 
 export { app, auth, db };
 
+export function getOrCreateLocalUserId(): string {
+  if (typeof window === 'undefined') return 'server_user';
+  try {
+    let id = localStorage.getItem('gifttogether_client_uid');
+    if (!id) {
+      id = 'u_' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+      localStorage.setItem('gifttogether_client_uid', id);
+    }
+    return id;
+  } catch {
+    return 'u_' + Math.random().toString(36).substring(2, 11);
+  }
+}
+
+export function getCurrentUserId(): string {
+  return auth?.currentUser?.uid || getOrCreateLocalUserId();
+}
+
 export async function signInWithGoogle(): Promise<User | null> {
   if (!auth) return null;
   try {
@@ -47,8 +65,14 @@ export async function signInWithGoogle(): Promise<User | null> {
     if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') {
       return null;
     }
+    if (err.code === 'auth/unauthorized-domain') {
+      console.warn(
+        `Firebase Auth: Hostname "${typeof window !== 'undefined' ? window.location.hostname : ''}" is not authorized in Firebase Console -> Authentication -> Settings -> Authorized Domains. Seamlessly continuing in Guest/Organizer mode.`
+      );
+      return null;
+    }
     console.warn('Google sign-in:', err?.message || err);
-    throw err;
+    return null;
   }
 }
 

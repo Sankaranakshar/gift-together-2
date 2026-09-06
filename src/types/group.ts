@@ -96,6 +96,23 @@ export interface AggregatePaymentSummary {
   pendingCount: number;
 }
 
+export type ProposalVoteOption = 'agree' | 'prefer_lower' | 'prefer_higher';
+
+export interface ProposalVote {
+  participantId: string;
+  vote: ProposalVoteOption;
+  votedAt: string;
+  participantName?: string;
+}
+
+export interface ProposalSummary {
+  totalVotes: number;
+  agreeCount: number;
+  preferLowerCount: number;
+  preferHigherCount: number;
+  agreementRate: number; // 0 - 100
+}
+
 export interface GiftGroup {
   id: string;
   coupleName: string;
@@ -135,6 +152,8 @@ export interface GiftGroup {
   targetContribution?: number; // Target per person
   targetGiftAmount?: number; // Target total gift fund
   isBudgetLocked?: boolean;
+  giftAmbition?: 'keep_it_simple' | 'make_it_special' | 'go_all_out';
+  proposalSummary?: ProposalSummary;
 
   // Gift brief & voting
   giftBrief?: GiftBrief;

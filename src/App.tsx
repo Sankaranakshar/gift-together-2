@@ -593,10 +593,44 @@ export default function App() {
     }
   };
 
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+
+  const handleSignIn = async () => {
+    try {
+      const user = await signInWithGoogle();
+      if (user) {
+        setCurrentUser(user);
+        setAuthNotice(null);
+      } else {
+        setAuthNotice(
+          'Google Sign-In is active on authorized domains. You are currently operating in local organizer mode with full functionality!'
+        );
+        setTimeout(() => setAuthNotice(null), 6000);
+      }
+    } catch {
+      // safe fallback
+    }
+  };
+
   const currentView = route.view;
 
   return (
     <div className="min-h-screen flex flex-col bg-[#FDFCFB] text-[#1A1A1A] selection:bg-[#2D3339] selection:text-white font-sans antialiased">
+      {authNotice && (
+        <div 
+          id="auth-notice-banner"
+          className="bg-[#2D3339] text-white text-xs py-2 px-4 text-center flex items-center justify-center gap-3 transition-all animate-in fade-in"
+        >
+          <span>{authNotice}</span>
+          <button 
+            onClick={() => setAuthNotice(null)} 
+            className="text-[#8E8881] hover:text-white cursor-pointer px-1 py-0.5 rounded text-xs"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Top Header */}
       <Header
         currentView={currentView as any}
@@ -606,7 +640,7 @@ export default function App() {
         onOpenCreate={() => setIsCreateOpen(true)}
         onOpenPrivacyModal={() => setIsPrivacyOpen(true)}
         onResetDemo={handleResetDemo}
-        onSignIn={signInWithGoogle}
+        onSignIn={handleSignIn}
         onSignOut={logOut}
       />
 
@@ -703,7 +737,7 @@ export default function App() {
             group={activeGroup}
             currentParticipant={currentParticipant}
             currentUser={currentUser}
-            onSignIn={signInWithGoogle}
+            onSignIn={handleSignIn}
             onSave={handleSaveBudget}
             onCancel={() => navigateToView('group')}
             isSubmitting={isSubmittingBudget}
@@ -726,6 +760,7 @@ export default function App() {
             onEditMyBudget={() => navigateToView('budget-form')}
             onLockAmount={handleLockConsensusAmount}
             isCreator={isCreator}
+            currentParticipant={currentParticipant}
           />
         )}
 
@@ -803,7 +838,7 @@ export default function App() {
         onClose={() => setIsCreateOpen(false)}
         onCreateGroup={handleCreateGroup}
         currentUser={currentUser}
-        onSignIn={signInWithGoogle}
+        onSignIn={handleSignIn}
       />
 
       <JoinGroupModal

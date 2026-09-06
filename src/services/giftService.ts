@@ -166,6 +166,7 @@ export async function fetchAIGiftSuggestions(params: {
   targetBudget: number;
   style?: string;
   notes?: string;
+  giftAmbition?: string;
 }): Promise<{ brief: GiftBrief; ideas: Omit<GiftOption, 'id' | 'voteCount' | 'createdBy'>[] }> {
   const response = await fetch('/api/gift-brief/suggest', {
     method: 'POST',
@@ -178,8 +179,12 @@ export async function fetchAIGiftSuggestions(params: {
   }
 
   const data = await response.json();
+  const rawIdeas = data.ideas || [];
+  // Ensure strict curation: 3 to 5 options max, no overwhelming 20 options
+  const ideas = rawIdeas.slice(0, 4);
+
   return {
     brief: data.brief,
-    ideas: data.ideas || [],
+    ideas,
   };
 }

@@ -14,7 +14,7 @@ import {
   Rocket
 } from 'lucide-react';
 import { GiftGroup, Participant } from '../types';
-import { PriorityPreference } from '../types/budget';
+import { PriorityPreference, GiftAmbition } from '../types/budget';
 import { formatINR } from '../utils/format';
 import { PrivacyBanner } from './PrivacyBanner';
 
@@ -29,6 +29,7 @@ interface BudgetFormProps {
     feelsRight: number;
     wouldStretchTo: number;
     priorityPreference: PriorityPreference;
+    giftAmbition?: GiftAmbition;
     // Legacy support
     minAmount?: number;
     comfortableAmount?: number;
@@ -60,6 +61,9 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
     currentParticipant?.wouldStretchTo ?? currentParticipant?.maxAmount ?? 3000
   );
   const [priorityPreference, setPriorityPreference] = useState<PriorityPreference>('balanced');
+  const [giftAmbition, setGiftAmbition] = useState<GiftAmbition>(
+    (currentParticipant as any)?.giftAmbition || (group.giftAmbition as GiftAmbition) || 'make_it_special'
+  );
   
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [localSubmitting, setLocalSubmitting] = useState(false);
@@ -104,6 +108,7 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
         feelsRight: Number(feelsRight),
         wouldStretchTo: Number(wouldStretchTo),
         priorityPreference,
+        giftAmbition,
         minAmount: Number(couldDo),
         comfortableAmount: Number(feelsRight),
         maxAmount: Number(wouldStretchTo),
@@ -306,69 +311,72 @@ export const BudgetForm: React.FC<BudgetFormProps> = ({
             </div>
           </div>
 
-          {/* Social Priority Preference */}
+          {/* Gift Ambition Selector */}
           <div className="space-y-2 pt-2 border-t border-[#EEE7E1]">
-            <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#1A1A1A]">
-              What's your priority for this group gift?
-            </label>
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold uppercase tracking-[0.15em] text-[#1A1A1A]">
+                Gift Ambition
+              </label>
+              <span className="text-[10px] text-[#8E8881]">Guides AI suggestions & consensus</span>
+            </div>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
               <button
                 type="button"
-                onClick={() => setPriorityPreference('easy')}
-                className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                  priorityPreference === 'easy'
-                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs'
+                onClick={() => setGiftAmbition('keep_it_simple')}
+                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer ${
+                  giftAmbition === 'keep_it_simple'
+                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs ring-1 ring-[#2D3339]'
                     : 'bg-[#F8F6F3] text-[#2D3339] border-[#EEE7E1] hover:bg-[#EFECE6]'
                 }`}
               >
-                <div className="flex items-center gap-1.5 font-medium text-xs">
-                  <Smile className="w-3.5 h-3.5 text-emerald-400" />
-                  <span>Keep it easy</span>
+                <div className="flex items-center gap-2 font-medium text-xs">
+                  <Smile className="w-4 h-4 text-emerald-400" />
+                  <span>Keep it simple</span>
                 </div>
-                <p className={`text-[10px] mt-1 leading-snug ${
-                  priorityPreference === 'easy' ? 'text-stone-300' : 'text-[#8E8881]'
+                <p className={`text-[10px] mt-1.5 leading-snug ${
+                  giftAmbition === 'keep_it_simple' ? 'text-stone-300' : 'text-[#8E8881]'
                 }`}>
-                  Keep contributions modest and relaxed for everyone.
+                  A thoughtful, practical gesture that everyone can easily pitch into without pressure.
                 </p>
               </button>
 
               <button
                 type="button"
-                onClick={() => setPriorityPreference('balanced')}
-                className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                  priorityPreference === 'balanced'
-                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs'
+                onClick={() => setGiftAmbition('make_it_special')}
+                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer ${
+                  giftAmbition === 'make_it_special'
+                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs ring-1 ring-[#2D3339]'
                     : 'bg-[#F8F6F3] text-[#2D3339] border-[#EEE7E1] hover:bg-[#EFECE6]'
                 }`}
               >
-                <div className="flex items-center gap-1.5 font-medium text-xs">
-                  <Scale className="w-3.5 h-3.5 text-blue-400" />
-                  <span>Balanced</span>
+                <div className="flex items-center gap-2 font-medium text-xs">
+                  <Sparkles className="w-4 h-4 text-amber-400" />
+                  <span>Make it special</span>
                 </div>
-                <p className={`text-[10px] mt-1 leading-snug ${
-                  priorityPreference === 'balanced' ? 'text-stone-300' : 'text-[#8E8881]'
+                <p className={`text-[10px] mt-1.5 leading-snug ${
+                  giftAmbition === 'make_it_special' ? 'text-stone-300' : 'text-[#8E8881]'
                 }`}>
-                  A solid collective gift that fits everyone comfortably.
+                  A meaningful, memorable keepsake that the couple will cherish for years.
                 </p>
               </button>
 
               <button
                 type="button"
-                onClick={() => setPriorityPreference('big')}
-                className={`p-3 rounded-2xl text-left border transition-all cursor-pointer ${
-                  priorityPreference === 'big'
-                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs'
+                onClick={() => setGiftAmbition('go_all_out')}
+                className={`p-3.5 rounded-2xl text-left border transition-all cursor-pointer ${
+                  giftAmbition === 'go_all_out'
+                    ? 'bg-[#2D3339] text-white border-[#2D3339] shadow-xs ring-1 ring-[#2D3339]'
                     : 'bg-[#F8F6F3] text-[#2D3339] border-[#EEE7E1] hover:bg-[#EFECE6]'
                 }`}
               >
-                <div className="flex items-center gap-1.5 font-medium text-xs">
-                  <Rocket className="w-3.5 h-3.5 text-amber-400" />
-                  <span>Go big</span>
+                <div className="flex items-center gap-2 font-medium text-xs">
+                  <Rocket className="w-4 h-4 text-rose-400" />
+                  <span>Go all out</span>
                 </div>
-                <p className={`text-[10px] mt-1 leading-snug ${
-                  priorityPreference === 'big' ? 'text-stone-300' : 'text-[#8E8881]'
+                <p className={`text-[10px] mt-1.5 leading-snug ${
+                  giftAmbition === 'go_all_out' ? 'text-stone-300' : 'text-[#8E8881]'
                 }`}>
-                  Excited to stretch for an unforgettable standout gift.
+                  An extraordinary dream gift, luxury dining, or unforgettable boutique getaway.
                 </p>
               </button>
             </div>

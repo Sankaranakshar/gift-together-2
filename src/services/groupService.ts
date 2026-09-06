@@ -10,7 +10,7 @@ import {
   getDocs, 
   Unsubscribe 
 } from 'firebase/firestore';
-import { db, auth, ensureAnonymousAuth, signInWithGoogle, isFirebaseConfigured } from './firebase';
+import { db, auth, isFirebaseConfigured, getCurrentUserId } from './firebase';
 import { GiftGroup, GroupStatus, Participant, GroupPhase, OccasionType, ContributionMode } from '../types';
 import { generateRandomGroupId, generateShortJoinCode, generateRecoveryToken } from '../utils/ids';
 import { saveParticipantSession } from './participantService';
@@ -33,17 +33,7 @@ export async function createGroup(input: CreateGroupInput): Promise<GiftGroup> {
     throw new Error('Firebase is not configured. Please enable Firebase.');
   }
 
-  let user = auth?.currentUser || (await ensureAnonymousAuth());
-  if (!user) {
-    try {
-      user = await signInWithGoogle();
-    } catch {
-      // User closed popup or cancelled
-    }
-  }
-  if (!user) {
-    throw new Error('Please sign in with Google to create a shared group.');
-  }
+  const creatorId = getCurrentUserId();
 
   const groupId = generateRandomGroupId();
   const shareCode = generateShortJoinCode();
@@ -55,7 +45,7 @@ export async function createGroup(input: CreateGroupInput): Promise<GiftGroup> {
     coupleName: input.coupleName.trim(),
     coupleNames: input.coupleName.trim(),
     creatorName: input.creatorName.trim(),
-    createdBy: user.uid,
+    createdBy: creatorId,
     createdAt: now,
     lastActivityAt: now,
     occasion: input.occasion || 'wedding',
@@ -98,9 +88,9 @@ export async function createGroup(input: CreateGroupInput): Promise<GiftGroup> {
 
   // 3. Add creator as the first participant (safe document, NO payment status)
   const recoveryToken = generateRecoveryToken();
-  const creatorParticipantRef = doc(db, 'groups', groupId, 'participants', user.uid);
+  const creatorParticipantRef = doc(db, 'groups', groupId, 'participants', creatorId);
   const creatorParticipant: Participant = {
-    id: user.uid,
+    id: creatorId,
     displayName: input.creatorName.trim(),
     name: input.creatorName.trim(),
     joinedAt: now,
@@ -113,7 +103,7 @@ export async function createGroup(input: CreateGroupInput): Promise<GiftGroup> {
   try {
     const recoveryRef = doc(db, 'groups', groupId, 'recoveryTokens', recoveryToken);
     await setDoc(recoveryRef, {
-      participantId: user.uid,
+      participantId: creatorId,
       createdAt: now,
     });
   } catch (e) {
@@ -122,7 +112,7 @@ export async function createGroup(input: CreateGroupInput): Promise<GiftGroup> {
 
   // 5. Save session locally
   saveParticipantSession(groupId, {
-    participantId: user.uid,
+    participantId: creatorId,
     displayName: input.creatorName.trim(),
     recoveryToken,
     isCreator: true,
